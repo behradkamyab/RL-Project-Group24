@@ -7,11 +7,14 @@ import torch
 import torch.optim as optim
 import numpy as np
 import random
+import pickle
+import os
+
 from agent import Agent, Policy
 
 
 def main(algorithm='reinforce', baseline_mode='none', baseline_value=0.0, baseline_alpha=0.0,
- n_episodes=500, seed=42, critic_weight=1.0):
+ n_episodes=500, seed=42, critic_weight=1.0, save_dir='results'):
 
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -23,6 +26,8 @@ def main(algorithm='reinforce', baseline_mode='none', baseline_value=0.0, baseli
 
     print('State space:', env.observation_space)  # state-space
     print('Action space:', env.action_space)  # action-space
+
+    os.makedirs(save_dir, exist_ok=True)
 
     policy = Policy(state_space= env.observation_space.shape[0], action_space=env.action_space.shape[0])
     agent = Agent(policy, algorithm=algorithm, baseline_mode=baseline_mode,
@@ -72,11 +77,10 @@ def main(algorithm='reinforce', baseline_mode='none', baseline_value=0.0, baseli
           suffix = f'ema_a{baseline_alpha:.4f}'
 
 
-    torch.save(agent.policy.state_dict(), f'model_{suffix}.pt')
 
+    torch.save(agent.policy.state_dict(), os.path.join(save_dir, f'model_{suffix}.pt'))
 
-    import pickle
-    with open(f'history_{suffix}.pkl', 'wb') as f:
+    with open(os.path.join(save_dir, f'history_{suffix}.pkl'), 'wb') as f:
       pickle.dump(returns_history, f)
     
     print(f"Saved model_{suffix}.pt and history_{suffix}.pkl")
