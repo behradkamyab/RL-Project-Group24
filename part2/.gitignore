@@ -1,0 +1,14 @@
+# Trained models (too large for git)
+*.zip
+*.pkl
+models/
+checkpoints/
+
+# Training artifacts
+runs/
+logs/
+tensorboard/
+
+# Don't commit model weights
+*_source_*.zip
+*_target_*.zip
