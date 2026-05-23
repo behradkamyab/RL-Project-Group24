@@ -3,20 +3,31 @@ import os
 
 import gymnasium as gym
 import numpy as np
-#from stable_baselines3 import 
+from stable_baselines3 import SAC, PPO
 import panda_gym  # noqa: F401 - required so Panda envs are registered
 
 
 def evaluate(model_path: str, n_episodes: int, deterministic: bool, render: bool, env_type: str) -> None:
-    if not os.path.exists(model_path):
-        raise FileNotFoundError(
-            f"Model file not found: {model_path}. "
-            "Make sure you saved your trained model with model.save(...)."
-        )
+    if not model_path.endswith(".zip"):
+        model_path_to_load = model_path + ".zip"
+    else:
+        model_path_to_load = model_path
+    
+    if not os.path.exists(model_path_to_load):
+        raise FileNotFoundError(f"Model file not found: {model_path_to_load}")
 
     render_mode = "human" if render else "rgb_array"
-    env = gym.make("PandaPush-v3", render_mode=render_mode, type=env_type, reward_type="dense")
-    #TODO: load model here
+    
+    # create environment without 'type' parameter
+    env = gym.make("PandaPush-v3", render_mode=render_mode, reward_type="dense")
+    
+    # Load model
+    if "sac" in model_path.lower():
+        model = SAC.load(model_path_to_load)
+    elif "ppo" in model_path.lower():
+        model = PPO.load(model_path_to_load)
+    else:
+        raise ValueError(f"Cannot determine model type from path: {model_path}")
 
     episode_returns = []
     successes = []
@@ -28,7 +39,7 @@ def evaluate(model_path: str, n_episodes: int, deterministic: bool, render: bool
         episode_return = 0.0
 
         while not (terminated or truncated):
-            action,_ = ... #TODO: get action from the model
+            action, _ = model.predict(obs, deterministic=deterministic)
             obs, reward, terminated, truncated, info = env.step(action)
             episode_return += float(reward)
 
@@ -42,8 +53,8 @@ def evaluate(model_path: str, n_episodes: int, deterministic: bool, render: bool
     env.close()
 
     returns = np.array(episode_returns, dtype=np.float32)
-    print("\n=== Evaluation summary ===")
-    print(f"Episodes: {n_episodes}")
+    print("\n Evaluation Results")
+    print(f"Environment type: {env_type}")
     print(f"Mean return: {returns.mean():.3f}")
     print(f"Std return:  {returns.std():.3f}")
     print(f"Min return:  {returns.min():.3f}")
@@ -55,35 +66,12 @@ def evaluate(model_path: str, n_episodes: int, deterministic: bool, render: bool
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Evaluate SAC on PandaPush-v3")
-    parser.add_argument(
-        "--model-path",
-        type=str,
-        required=True,
-        help="Path to a PPO model zip file (e.g., ppo_panda_push.zip)",
-    )
-    parser.add_argument(
-        "--episodes", 
-        type=int, 
-        default=500, 
-        help="Number of eval episodes"
-    )
-    parser.add_argument(
-        "--stochastic",
-        action="store_true",
-        help="Use stochastic policy sampling instead of deterministic actions",
-    )
-    parser.add_argument(
-        "--render",
-        action="store_true",
-        help="Render with a window (render_mode='human')",
-    )
-    parser.add_argument(
-        "--env-type",
-        type=str, default="target",
-        choices=["source", "target"],
-        help="Type of environment to evaluate on (default: target)",
-    )
+    parser = argparse.ArgumentParser(description="Evaluate trained model on PandaPush")
+    parser.add_argument("--model-path", type=str, required=True, help="Path to model zip file")
+    parser.add_argument("--episodes", type=int, default=50, help="Number of eval episodes")
+    parser.add_argument("--stochastic", action="store_true", help="Use stochastic policy")
+    parser.add_argument("--render", action="store_true", help="Render with window")
+    parser.add_argument("--env-type", type=str, default="target", choices=["source", "target"], help="Environment type")
     return parser.parse_args()
 
 

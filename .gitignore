@@ -1,0 +1,21 @@
+# Model files (large, not needed in repo)
+*.zip
+**/*.zip
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# Outputs
+*.log
+results/
+outputs/
