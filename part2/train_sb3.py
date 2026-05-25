@@ -22,13 +22,20 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '0'  # Use first GPU
 class ActivityCallback(BaseCallback):
     """
     Custom callback to prevent timeout on cloud platforms (Colab, Studio AI, etc.)
-    Prints progress every N steps to keep the process alive and visible.
+    Prints progress every N steps AND saves to log file for persistence.
     """
-    def __init__(self, log_freq=500, verbose=0):
+    def __init__(self, log_freq=1000, verbose=0, log_file="training.log"):
         super().__init__(verbose)
         self.log_freq = log_freq
         self.last_log_time = time.time()
         self.start_time = time.time()
+        self.log_file = log_file
+        
+        # Create log file header
+        with open(self.log_file, "w") as f:
+            f.write("="*70 + "\n")
+            f.write(f"Training started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write("="*70 + "\n\n")
 
     def _on_step(self) -> bool:
         # Log every log_freq steps OR every 30 seconds (whichever comes first)
@@ -37,17 +44,21 @@ class ActivityCallback(BaseCallback):
             elapsed = current_time - self.start_time
             fps = self.num_timesteps / elapsed if elapsed > 0 else 0
             
-            # Detailed activity log
-            print(f"\n{'='*70}")
-            print(f"⏱️  [{datetime.now().strftime('%H:%M:%S')}] ACTIVE - Step {self.num_timesteps} | "
-                  f"Elapsed: {elapsed/60:.1f}min | FPS: {fps:.1f}")
-            print(f"📊 Timesteps: {self.num_timesteps:,}")
+            # Format log message
+            log_msg = (
+                f"\n{'='*70}\n"
+                f"⏱️  [{datetime.now().strftime('%H:%M:%S')}] ACTIVE - Step {self.num_timesteps} | "
+                f"Elapsed: {elapsed/60:.1f}min | FPS: {fps:.1f}\n"
+                f"📊 Timesteps: {self.num_timesteps:,}\n"
+                f"{'='*70}\n"
+            )
             
-            # Show learning info if available
-            if hasattr(self.model, 'logger') and self.model.logger:
-                print(f"💾 Checkpoint: best_model checkpoint saved")
+            # Print to console (prevents cloud timeout)
+            print(log_msg)
             
-            print(f"{'='*70}\n")
+            # Save to file (persistent backup)
+            with open(self.log_file, "a") as f:
+                f.write(log_msg)
             
             # Force flush output to cloud platform
             sys.stdout.flush()
@@ -196,10 +207,9 @@ def main() -> None:
     print(f"   - Larger replay buffer and gradient steps for SAC")
     print(f"   - Smaller batch size for better gradient variance")
     print(f"\n☁️  CLOUD PLATFORM OPTIMIZED (Colab, Studio AI, etc.):")
-    print(f"   ✅ Activity callback logs every 500 steps to prevent timeout")
-    print(f"   ✅ Checkpoint saving every 5000 steps")
-    print(f"   ✅ Frequent evaluation output to keep platform aware")
-    print(f"   ✅ All output flushed immediately to cloud interface")
+    print(f"   ✅ Activity logs printed every 1000 steps (prevents timeout)")
+    print(f"   ✅ Logs also saved to training.log for persistence")
+    print(f"   ✅ All output flushed immediately to cloud interface\n")
     print(f"\n📈 Monitoring GPU usage: Use 'nvidia-smi' in another terminal\n")
     print(f"Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
     
@@ -217,10 +227,9 @@ def main() -> None:
     print(f"{'='*70}")
     
     print(f"\n📌 FOR STUDIO AI / COLAB USERS:")
-    print(f"   1. Download model files from the cloud storage after training")
-    print(f"   2. Best model is in best_model/ folder (best performing checkpoint)")
-    print(f"   3. Use eval_logs/ for TensorBoard visualization")
-    print(f"   4. All files saved locally for download")
+    print(f"   1. Download model file from cloud storage after training")
+    print(f"   2. Download training.log to see full training progress")
+    print(f"   3. Model file: {save_name}.zip")
     
     print(f"\n📌 NEXT STEPS TO IMPROVE FURTHER:")
     print(f"   1. Use UDR: --sampling-strategy udr")
