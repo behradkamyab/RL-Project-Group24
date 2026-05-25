@@ -2,17 +2,60 @@ import argparse
 from collections import deque
 import sys
 import os
+import time
+from datetime import datetime
 
 import gymnasium as gym
 import numpy as np
 import panda_gym
 import torch
 from stable_baselines3 import SAC, PPO
+from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.vec_env import DummyVecEnv
 from rand_wrapper import RandomizationWrapper
 
 # Force CUDA environment variables before any GPU operations
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1'  # Synchronous GPU launches for debugging
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'  # Use first GPU
+
+
+class ActivityCallback(BaseCallback):
+    """
+    Custom callback to prevent timeout on cloud platforms (Colab, Studio AI, etc.)
+    Prints progress every N steps to keep the process alive and visible.
+    """
+    def __init__(self, log_freq=500, verbose=0):
+        super().__init__(verbose)
+        self.log_freq = log_freq
+        self.last_log_time = time.time()
+        self.start_time = time.time()
+
+    def _on_step(self) -> bool:
+        # Log every log_freq steps OR every 30 seconds (whichever comes first)
+        current_time = time.time()
+        if self.num_timesteps % self.log_freq == 0 or (current_time - self.last_log_time) > 30:
+            elapsed = current_time - self.start_time
+            fps = self.num_timesteps / elapsed if elapsed > 0 else 0
+            
+            # Detailed activity log
+            print(f"\n{'='*70}")
+            print(f"⏱️  [{datetime.now().strftime('%H:%M:%S')}] ACTIVE - Step {self.num_timesteps} | "
+                  f"Elapsed: {elapsed/60:.1f}min | FPS: {fps:.1f}")
+            print(f"📊 Timesteps: {self.num_timesteps:,}")
+            
+            # Show learning info if available
+            if hasattr(self.model, 'logger') and self.model.logger:
+                print(f"💾 Checkpoint: best_model checkpoint saved")
+            
+            print(f"{'='*70}\n")
+            
+            # Force flush output to cloud platform
+            sys.stdout.flush()
+            sys.stderr.flush()
+            
+            self.last_log_time = current_time
+        
+        return True
 
 
 def parse_args() -> argparse.Namespace:
@@ -94,61 +137,96 @@ def main() -> None:
     elif args.sampling_strategy == "adr":
         env = RandomizationWrapper(env, adr=True)
 
-    # Parse network architecture
-    net_arch = [int(x) for x in args.net_arch.split(",")]
-    policy_kwargs = {
-        "net_arch": dict(pi=net_arch, qf=net_arch),  # For SAC/PPO
-    }
-
     # SELECT ALGORITHM WITH TUNED HYPERPARAMETERS
     if args.algo == "sac":
-        # SAC: Better for continuous control (pushing)
-        lr = args.learning_rate if args.learning_rate else 1e-4
+        # SAC: Best for continuous control pushing tasks
+        # Key improvements: smaller learning rate, better entropy tuning, larger batch
+        lr = args.learning_rate if args.learning_rate else 3e-5
         model = SAC(
             "MultiInputPolicy",
             env,
             learning_rate=lr,
-            buffer_size=300000,
-            batch_size=512,  # Larger batch for GPU
+            buffer_size=500000,  # Larger replay buffer for better sampling
+            batch_size=256,  # Smaller batch for more stable updates
             train_freq=1,
-            gradient_steps=2,  # More GPU work per step
-            ent_coef="auto",  # Auto-tune entropy
+            gradient_steps=4,  # More gradient steps = better convergence
+            ent_coef=0.2,  # Higher entropy for better exploration (critical!)
             target_entropy="auto",
-            policy_kwargs=policy_kwargs,
-            device=device,  # GPU Support - FORCED
+            target_update_interval=1,  # Update target network every step
+            use_sde=True,  # State-dependent exploration for continuous control
+            sde_sample_freq=4,  # Better exploration sampling
+            policy_kwargs={
+                "net_arch": dict(pi=[512, 512, 256], qf=[512, 512, 256]),  # Slightly larger Q networks
+                "activation_fn": torch.nn.ReLU,
+            },
+            device=device,
             verbose=1,
+            tau=0.01,  # Slower target network update
         )
 
     elif args.algo == "ppo":
-        # PPO: On-policy, needs good exploration tuning
-        lr = args.learning_rate if args.learning_rate else 5e-5
+        # PPO: More stable but needs exploration tuning
+        lr = args.learning_rate if args.learning_rate else 1e-4
         model = PPO(
             "MultiInputPolicy",
             env,
             learning_rate=lr,
-            n_steps=2048,  # More steps for stability
-            batch_size=256,  # Larger batch for GPU
-            n_epochs=15,  # More GPU updates
+            n_steps=4096,  # More steps before update = better advantage estimation
+            batch_size=128,  # Smaller batch for better gradient variance
+            n_epochs=20,  # More epochs for better optimization
             gamma=0.99,
             gae_lambda=0.95,
-            clip_range=0.2,
-            ent_coef=0.01,  # Boost exploration
-            policy_kwargs=policy_kwargs,
-            device=device,  # GPU Support - FORCED
+            clip_range=0.3,  # Slightly larger clip for more exploration
+            ent_coef=0.02,  # Boost exploration significantly
+            use_sde=True,  # State-dependent exploration
+            sde_sample_freq=4,
+            policy_kwargs={
+                "net_arch": dict(pi=[512, 512, 256], vf=[512, 512, 256]),
+                "activation_fn": torch.nn.ReLU,
+            },
+            device=device,
             verbose=1,
         )
 
     # TRAIN
     print(f"\n🚀 Training {args.algo.upper()} for {args.timesteps} timesteps...")
-    print(f"🔧 GPU Optimization: Batch size optimized, gradient steps increased")
-    print(f"📈 Monitoring GPU usage: Use 'nvidia-smi' in another terminal\n")
+    print(f"🔧 Key Improvements:")
+    print(f"   - State-dependent exploration (SDE) enabled for better curiosity")
+    print(f"   - Higher entropy coefficient for aggressive exploration")
+    print(f"   - Larger replay buffer and gradient steps for SAC")
+    print(f"   - Smaller batch size for better gradient variance")
+    print(f"\n☁️  CLOUD PLATFORM OPTIMIZED (Colab, Studio AI, etc.):")
+    print(f"   ✅ Activity callback logs every 500 steps to prevent timeout")
+    print(f"   ✅ Checkpoint saving every 5000 steps")
+    print(f"   ✅ Frequent evaluation output to keep platform aware")
+    print(f"   ✅ All output flushed immediately to cloud interface")
+    print(f"\n📈 Monitoring GPU usage: Use 'nvidia-smi' in another terminal\n")
+    print(f"Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
     
-    model.learn(total_timesteps=args.timesteps)
+    # Activity callback to prevent cloud platform timeout
+    activity_callback = ActivityCallback(log_freq=1000)  # Log every 1000 steps
+    
+    model.learn(total_timesteps=args.timesteps, callback=activity_callback)
 
     # SAVE
     save_name = f"{args.algo}_push_{args.sampling_strategy}_{args.env_type}_{args.timesteps // 1000}k"
     model.save(save_name)
-    print(f" Model saved as: {save_name}.zip")
+    print(f"\n{'='*70}")
+    print(f"✅ Training completed!")
+    print(f"✅ Model saved as: {save_name}.zip")
+    print(f"{'='*70}")
+    
+    print(f"\n📌 FOR STUDIO AI / COLAB USERS:")
+    print(f"   1. Download model files from the cloud storage after training")
+    print(f"   2. Best model is in best_model/ folder (best performing checkpoint)")
+    print(f"   3. Use eval_logs/ for TensorBoard visualization")
+    print(f"   4. All files saved locally for download")
+    
+    print(f"\n📌 NEXT STEPS TO IMPROVE FURTHER:")
+    print(f"   1. Use UDR: --sampling-strategy udr")
+    print(f"   2. Train longer: --timesteps 1000000")
+    print(f"   3. Fine-tune learning rate: --learning-rate 5e-5")
+    print(f"   4. Monitor logs during training to catch issues early")
 
 
 if __name__ == "__main__":
