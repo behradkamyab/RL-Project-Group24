@@ -123,6 +123,12 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
+    try:
+        net_arch = [int(x.strip()) for x in args.net_arch.split(",") if x.strip()]
+    except ValueError:
+        print("❌ ERROR: --net-arch must be comma-separated integers, e.g. 256,256")
+        sys.exit(1)
+
     # FORCE GPU Configuration
     if not torch.cuda.is_available():
         print("❌ ERROR: CUDA GPU not available!")
@@ -151,28 +157,28 @@ def main() -> None:
     # SELECT ALGORITHM WITH TUNED HYPERPARAMETERS
     if args.algo == "sac":
         # SAC: OPTIMIZED for continuous control pushing tasks
-        # Conservative hyperparameters focused on stability
-        lr = args.learning_rate if args.learning_rate else 3e-5  # Conservative: 3e-5 (was 3e-4)
+        # Balanced defaults for stability and learning speed
+        lr = args.learning_rate if args.learning_rate else 3e-4
         model = SAC(
             "MultiInputPolicy",
             env,
             learning_rate=lr,
-            buffer_size=100000,
-            batch_size=64,  # Back to 64 for speed
+            buffer_size=300000,
+            batch_size=256,
             train_freq=1,
-            gradient_steps=5,  # Back to 5 for speed
-            ent_coef=0.05,  # Reduced entropy for more focused learning
+            gradient_steps=1,
+            ent_coef="auto",
             target_entropy="auto",
             target_update_interval=1,
             use_sde=True,
             sde_sample_freq=4,
             policy_kwargs={
-                "net_arch": dict(pi=[512, 512], qf=[512, 512]),
+                "net_arch": dict(pi=net_arch, qf=net_arch),
                 "activation_fn": torch.nn.ReLU,
             },
             device=device,
             verbose=1,
-            tau=0.01,  # Standard tau
+            tau=0.005,
         )
 
     elif args.algo == "ppo":
