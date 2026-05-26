@@ -137,7 +137,7 @@ def main() -> None:
 
     env = gym.make(
         "PandaPush-v3",
-        render_mode="rgb_array",
+        render_mode="rgb_array",  # Headless rendering (no display, optimized for speed!)
         reward_type="dense",
     )
 
@@ -150,49 +150,51 @@ def main() -> None:
 
     # SELECT ALGORITHM WITH TUNED HYPERPARAMETERS
     if args.algo == "sac":
-        # SAC: Best for continuous control pushing tasks
-        # Key improvements: smaller learning rate, better entropy tuning, larger batch
-        lr = args.learning_rate if args.learning_rate else 3e-5
+        # SAC: OPTIMIZED for continuous control pushing tasks
+        # Conservative hyperparameters focused on stability
+        lr = args.learning_rate if args.learning_rate else 3e-5  # Conservative: 3e-5 (was 3e-4)
         model = SAC(
             "MultiInputPolicy",
             env,
             learning_rate=lr,
-            buffer_size=500000,  # Larger replay buffer for better sampling
-            batch_size=256,  # Smaller batch for more stable updates
+            buffer_size=100000,
+            batch_size=64,  # Back to 64 for speed
             train_freq=1,
-            gradient_steps=4,  # More gradient steps = better convergence
-            ent_coef=0.2,  # Higher entropy for better exploration (critical!)
+            gradient_steps=5,  # Back to 5 for speed
+            ent_coef=0.05,  # Reduced entropy for more focused learning
             target_entropy="auto",
-            target_update_interval=1,  # Update target network every step
-            use_sde=True,  # State-dependent exploration for continuous control
-            sde_sample_freq=4,  # Better exploration sampling
+            target_update_interval=1,
+            use_sde=True,
+            sde_sample_freq=4,
             policy_kwargs={
-                "net_arch": dict(pi=[512, 512, 256], qf=[512, 512, 256]),  # Slightly larger Q networks
+                "net_arch": dict(pi=[512, 512], qf=[512, 512]),
                 "activation_fn": torch.nn.ReLU,
             },
             device=device,
             verbose=1,
-            tau=0.01,  # Slower target network update
+            tau=0.01,  # Standard tau
         )
 
     elif args.algo == "ppo":
-        # PPO: More stable but needs exploration tuning
-        lr = args.learning_rate if args.learning_rate else 1e-4
+        # PPO: Optimized for continuous control (pushing task)
+        # Key: Higher LR, lower epochs, aggressive exploration
+        lr = args.learning_rate if args.learning_rate else 3e-4  # 3x faster learning!
         model = PPO(
             "MultiInputPolicy",
             env,
             learning_rate=lr,
-            n_steps=4096,  # More steps before update = better advantage estimation
-            batch_size=128,  # Smaller batch for better gradient variance
-            n_epochs=20,  # More epochs for better optimization
+            n_steps=8192,  # More steps before update = better advantage estimation
+            batch_size=64,  # Smaller batch for better gradient signal
+            n_epochs=3,  # Reduced to prevent overfitting (was 20!)
             gamma=0.99,
             gae_lambda=0.95,
-            clip_range=0.3,  # Slightly larger clip for more exploration
-            ent_coef=0.02,  # Boost exploration significantly
+            clip_range=0.2,  # More conservative clip (better stability)
+            ent_coef=0.05,  # High entropy for aggressive exploration (critical for pushing!)
             use_sde=True,  # State-dependent exploration
             sde_sample_freq=4,
+            max_grad_norm=0.5,  # Gradient clipping for stability
             policy_kwargs={
-                "net_arch": dict(pi=[512, 512, 256], vf=[512, 512, 256]),
+                "net_arch": dict(pi=[512, 512], vf=[512, 512]),  # Simpler networks
                 "activation_fn": torch.nn.ReLU,
             },
             device=device,
@@ -214,7 +216,7 @@ def main() -> None:
     print(f"Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
     
     # Activity callback to prevent cloud platform timeout
-    activity_callback = ActivityCallback(log_freq=1000)  # Log every 1000 steps
+    activity_callback = ActivityCallback(log_freq=2000)  # Log every 2000 steps for less overhead
     
     model.learn(total_timesteps=args.timesteps, callback=activity_callback)
 
