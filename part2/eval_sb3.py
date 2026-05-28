@@ -18,8 +18,13 @@ def evaluate(model_path: str, n_episodes: int, deterministic: bool, render: bool
 
     render_mode = "human" if render else "rgb_array"
     
-    # create environment without 'type' parameter
-    env = gym.make("PandaPush-v3", render_mode=render_mode, reward_type="dense")
+    # Create environment with correct domain type (source/target)
+    env = gym.make(
+        "PandaPush-v3",
+        render_mode=render_mode,
+        reward_type="dense",
+        type=env_type,
+    )
     
     # Load model
     if "sac" in model_path.lower():

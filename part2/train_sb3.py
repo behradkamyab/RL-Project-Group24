@@ -40,7 +40,7 @@ class ActivityCallback(BaseCallback):
     def _on_step(self) -> bool:
         # Log every log_freq steps OR every 30 seconds (whichever comes first)
         current_time = time.time()
-        if self.num_timesteps % self.log_freq == 0 or (current_time - self.last_log_time) > 30:
+        if self.num_timesteps % self.log_freq == 0 or (current_time - self.last_log_time) > 100:
             elapsed = current_time - self.start_time
             fps = self.num_timesteps / elapsed if elapsed > 0 else 0
             
@@ -145,6 +145,7 @@ def main() -> None:
         "PandaPush-v3",
         render_mode="rgb_array",  # Headless rendering (no display, optimized for speed!)
         reward_type="dense",
+        type=args.env_type,
     )
 
     # UDR / ADR
@@ -209,42 +210,19 @@ def main() -> None:
 
     # TRAIN
     print(f"\n🚀 Training {args.algo.upper()} for {args.timesteps} timesteps...")
-    print(f"🔧 Key Improvements:")
-    print(f"   - State-dependent exploration (SDE) enabled for better curiosity")
-    print(f"   - Higher entropy coefficient for aggressive exploration")
-    print(f"   - Larger replay buffer and gradient steps for SAC")
-    print(f"   - Smaller batch size for better gradient variance")
-    print(f"\n☁️  CLOUD PLATFORM OPTIMIZED (Colab, Studio AI, etc.):")
-    print(f"   ✅ Activity logs printed every 1000 steps (prevents timeout)")
-    print(f"   ✅ Logs also saved to training.log for persistence")
-    print(f"   ✅ All output flushed immediately to cloud interface\n")
-    print(f"\n📈 Monitoring GPU usage: Use 'nvidia-smi' in another terminal\n")
+    
     print(f"Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
     
     # Activity callback to prevent cloud platform timeout
-    activity_callback = ActivityCallback(log_freq=2000)  # Log every 2000 steps for less overhead
+    activity_callback = ActivityCallback(log_freq=10000)
     
     model.learn(total_timesteps=args.timesteps, callback=activity_callback)
 
     # SAVE
     save_name = f"{args.algo}_push_{args.sampling_strategy}_{args.env_type}_{args.timesteps // 1000}k"
     model.save(save_name)
-    print(f"\n{'='*70}")
-    print(f"✅ Training completed!")
-    print(f"✅ Model saved as: {save_name}.zip")
-    print(f"{'='*70}")
-    
-    print(f"\n📌 FOR STUDIO AI / COLAB USERS:")
-    print(f"   1. Download model file from cloud storage after training")
-    print(f"   2. Download training.log to see full training progress")
-    print(f"   3. Model file: {save_name}.zip")
-    
-    print(f"\n📌 NEXT STEPS TO IMPROVE FURTHER:")
-    print(f"   1. Use UDR: --sampling-strategy udr")
-    print(f"   2. Train longer: --timesteps 1000000")
-    print(f"   3. Fine-tune learning rate: --learning-rate 5e-5")
-    print(f"   4. Monitor logs during training to catch issues early")
 
 
 if __name__ == "__main__":
     main()
+    
