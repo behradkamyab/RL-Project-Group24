@@ -150,10 +150,10 @@ def main() -> None:
 
     # UDR / ADR
     if args.sampling_strategy == "udr":
-        env = RandomizationWrapper(env)
+        env = RandomizationWrapper(env, mode="udr")
 
     elif args.sampling_strategy == "adr":
-        env = RandomizationWrapper(env, adr=True)
+        env = RandomizationWrapper(env, mode="adr")
 
     # SELECT ALGORITHM WITH TUNED HYPERPARAMETERS
     if args.algo == "sac":
