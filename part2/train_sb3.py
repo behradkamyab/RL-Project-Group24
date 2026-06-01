@@ -12,6 +12,7 @@ import torch
 from stable_baselines3 import SAC, PPO
 
 from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.vec_env import DummyVecEnv
 from rand_wrapper import RandomizationWrapper
 
@@ -100,8 +101,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--timesteps",
         type=int,
-        default=300000,
+        default=100000,
         help="Number of training timesteps",
+    )
+
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed",
     )
 
     parser.add_argument(
@@ -142,12 +150,18 @@ def main() -> None:
     print(f"📊 CUDA Version: {torch.version.cuda}")
     torch.cuda.empty_cache()  # Clear GPU cache before training
 
+    set_random_seed(args.seed)
+
     env = gym.make(
         "PandaPush-v3",
         render_mode="rgb_array",  # Headless rendering (no display, optimized for speed!)
         reward_type="dense",
         type=args.env_type,
     )
+
+    env.reset(seed=args.seed)
+    env.action_space.seed(args.seed)
+    env.observation_space.seed(args.seed)
 
     # UDR / ADR
     if args.sampling_strategy == "udr":

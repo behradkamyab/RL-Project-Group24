@@ -10,12 +10,17 @@ class RandomizationWrapper(gym.Wrapper):
     def __init__(
         self,
         env,
-        mass_range=(1.0, 1.0),
+        mass_range=(0.5, 2.0),
         mode="none",
+        adr_init_range=(0.8, 1.2),
         adr_window=100,
         adr_target=0.7,
         adr_delta=0.1,
         adr_min_width=0.1,
+        adr_update_freq=1,
+        log_every=0,
+        verify_mass=False,
+        success_key="is_success",
     ):
         super().__init__(env)
 
@@ -25,13 +30,32 @@ class RandomizationWrapper(gym.Wrapper):
         self.adr_target = adr_target
         self.adr_delta = adr_delta
         self.adr_min_width = adr_min_width
+        self.adr_update_freq = adr_update_freq
+        self.log_every = log_every
+        self.verify_mass = verify_mass
+        self.success_key = success_key
         self.success_window = deque(maxlen=adr_window)
         self.last_sample_type = "none"
-
+        self.last_sampled_mass = None
+        self.last_applied_mass = None
+        self.last_mass_verified = None
+        self.reset_count = 0
+        
         # global limits
         self.mass_min_limit, self.mass_max_limit = mass_range
-        self.mass_min = self.mass_min_limit
-        self.mass_max = self.mass_max_limit
+        init_min, init_max = adr_init_range
+        init_min = max(self.mass_min_limit, init_min)
+        init_max = min(self.mass_max_limit, init_max)
+        if init_min >= init_max:
+            raise ValueError(
+                "adr_init_range must be within mass_range and have init_min < init_max"
+            )
+        if self.mode == "adr":
+            self.mass_min = init_min
+            self.mass_max = init_max
+        else:
+            self.mass_min = self.mass_min_limit
+            self.mass_max = self.mass_max_limit
 
     # -----------------------
     # Mass Sampling
@@ -58,11 +82,11 @@ class RandomizationWrapper(gym.Wrapper):
         done = terminated or truncated
 
         if done:
-            success = info.get("is_success")
+            success = info.get(self.success_key)
             if success is None:
                 success = info.get("success")
             if success is not None:
-                self.success_window.append(1.0 if success else 0.0)
+                self.success_window.append(float(success))
 
         return obs, reward, terminated, truncated, info
 
@@ -70,6 +94,8 @@ class RandomizationWrapper(gym.Wrapper):
         if self.mode != "adr":
             return
         if len(self.success_window) < self.adr_window:
+            return
+        if self.adr_update_freq > 1 and (self.reset_count % self.adr_update_freq) != 0:
             return
 
         success_rate = sum(self.success_window) / len(self.success_window)
@@ -92,10 +118,14 @@ class RandomizationWrapper(gym.Wrapper):
     # -----------------------
 
     def reset(self, **kwargs):
+        self.reset_count += 1
 
         self._update_adr_range()
 
         new_mass = self._sample_mass()
+        self.last_sampled_mass = new_mass
+
+        obs, info = super().reset(**kwargs)
 
         if new_mass is not None:
 
@@ -107,6 +137,25 @@ class RandomizationWrapper(gym.Wrapper):
                 linkIndex=-1,
                 mass=float(new_mass),
             )
+            self.last_applied_mass = float(new_mass)
 
+            if self.verify_mass:
+                try:
+                    dynamics = sim.physics_client.getDynamicsInfo(object_body_id, -1)
+                    actual_mass = float(dynamics[0])
+                    self.last_mass_verified = abs(actual_mass - float(new_mass)) < 1e-6
+                except Exception:
+                    self.last_mass_verified = None
 
-        return super().reset(**kwargs)
+        if self.log_every and (self.reset_count % self.log_every) == 0:
+            success_rate = None
+            if self.success_window:
+                success_rate = sum(self.success_window) / len(self.success_window)
+            print(
+                f"[{self.mode}] reset={self.reset_count} mass={new_mass} "
+                f"range=[{self.mass_min:.3f},{self.mass_max:.3f}] "
+                f"success_rate={success_rate}"
+            )
+            
+
+        return obs, info
