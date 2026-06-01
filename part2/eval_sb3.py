@@ -5,9 +5,11 @@ import gymnasium as gym
 import numpy as np
 from stable_baselines3 import SAC, PPO
 import panda_gym  # noqa: F401 - required so Panda envs are registered
+np.random.seed(65) # used for reproducibility 
 
 
 def evaluate(model_path: str, n_episodes: int, deterministic: bool, render: bool, env_type: str) -> None:
+    
     if not model_path.endswith(".zip"):
         model_path_to_load = model_path + ".zip"
     else:
@@ -18,13 +20,8 @@ def evaluate(model_path: str, n_episodes: int, deterministic: bool, render: bool
 
     render_mode = "human" if render else "rgb_array"
     
-    # Create environment with correct domain type (source/target)
-    env = gym.make(
-        "PandaPush-v3",
-        render_mode=render_mode,
-        reward_type="dense",
-        type=env_type,
-    )
+    # create environment without 'type' parameter
+    env = gym.make("PandaPush-v3", render_mode=render_mode, reward_type="dense")
     
     # Load model
     if "sac" in model_path.lower():
@@ -38,9 +35,9 @@ def evaluate(model_path: str, n_episodes: int, deterministic: bool, render: bool
     successes = []
 
     for episode in range(1, n_episodes + 1):
-        obs, info = env.reset()
+        obs, info = env.reset()  # Use episode number as seed for reproducibility
         terminated = False
-        truncated = False
+        truncated = False 
         episode_return = 0.0
 
         while not (terminated or truncated):
@@ -54,20 +51,39 @@ def evaluate(model_path: str, n_episodes: int, deterministic: bool, render: bool
             successes.append(float(info["is_success"]))
 
         print(f"Episode {episode:03d} | return = {episode_return:.3f}")
-
+        
     env.close()
 
     returns = np.array(episode_returns, dtype=np.float32)
-    print("\n Evaluation Results")
+    successes_array = np.array(successes, dtype=np.float32) if successes else np.array([])
+    
+    # Calculate variance
+    returns_variance = returns.var()
+    
+    print("\n" + "="*60)
+    print(" EVALUATION RESULTS")
+    print("="*60)
     print(f"Environment type: {env_type}")
-    print(f"Mean return: {returns.mean():.3f}")
-    print(f"Std return:  {returns.std():.3f}")
-    print(f"Min return:  {returns.min():.3f}")
-    print(f"Max return:  {returns.max():.3f}")
+    print(f"Episodes evaluated: {n_episodes}")
+    print("-"*60)
+    print("RETURN METRICS:")
+    print(f"  Mean return:     {returns.mean():.3f}")
+    print(f"  Std dev:         {returns.std():.3f}")
+    print(f"  Variance:        {returns_variance:.3f}")
+    print(f"  Min return:      {returns.min():.3f}")
+    print(f"  Max return:      {returns.max():.3f}")
+    print("-"*60)
 
-    if successes:
-        success_rate = float(np.mean(successes))
-        print(f"Success rate: {success_rate:.2%}")
+    if successes_array.size > 0:
+        success_rate = float(np.mean(successes_array))
+        success_variance = np.var(successes_array)
+        print("SUCCESS METRICS:")
+        print(f"  Success rate:    {success_rate:.2%}")
+        print(f"  Success variance: {success_variance:.4f}")
+    else:
+        print("SUCCESS METRICS: No success data available")
+    
+    print("="*60)
 
 
 def parse_args() -> argparse.Namespace:
