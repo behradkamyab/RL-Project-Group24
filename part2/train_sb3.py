@@ -85,9 +85,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--sampling-strategy",
         type=str,
-        default="none",
+        default="udr",
         choices=["none", "udr", "adr"],
         help="Sampling strategy for the object mass",
+    )
+
+    parser.add_argument(
+        "--mass-range",
+        type=float,
+        nargs=2,
+        default=[0.5, 2.0],
+        metavar=("MIN", "MAX"),
+        help="Object mass range, e.g. --mass-range 1 3 or --mass-range 0.5 6",
     )
 
     parser.add_argument(
@@ -164,11 +173,13 @@ def main() -> None:
     env.observation_space.seed(args.seed)
 
     # UDR / ADR
+    mass_range = (float(args.mass_range[0]), float(args.mass_range[1]))
+
     if args.sampling_strategy == "udr":
-        env = RandomizationWrapper(env, mode="udr")
+        env = RandomizationWrapper(env, mode="udr", mass_range=mass_range)
 
     elif args.sampling_strategy == "adr":
-        env = RandomizationWrapper(env, mode="adr")
+        env = RandomizationWrapper(env, mode="adr", mass_range=mass_range)
 
     # SELECT ALGORITHM WITH TUNED HYPERPARAMETERS
     if args.algo == "sac":
