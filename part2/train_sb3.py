@@ -10,6 +10,7 @@ import numpy as np
 import panda_gym
 import torch
 from stable_baselines3 import SAC, PPO
+
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.vec_env import DummyVecEnv
 from rand_wrapper import RandomizationWrapper
@@ -215,8 +216,10 @@ def main() -> None:
     
     # Activity callback to prevent cloud platform timeout
     activity_callback = ActivityCallback(log_freq=10000)
-    
-    model.learn(total_timesteps=args.timesteps, callback=activity_callback)
+    model.learn(
+        total_timesteps=args.timesteps,
+        callback=[activity_callback],
+    )
 
     # SAVE
     save_name = f"{args.algo}_push_{args.sampling_strategy}_{args.env_type}_{args.timesteps // 1000}k"
