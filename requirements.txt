@@ -3,3 +3,5 @@ mujoco
 stable-baselines3[extra]>=2.0.0
 imageio
 opencv-python<4
+imageio>=2.37.3
+imageio-ffmpeg>=0.6.0
