@@ -12,12 +12,16 @@ def act(policy, state):
     with torch.no_grad():
         x = torch.from_numpy(state).float()
         normal_dist, _ = policy(x)
-        return normal_dist.mean.cpu().numpy()
+        action = torch.tanh(normal_dist.mean)
+        return action.cpu().numpy()
 
 
-def load_policy(env, model_path):
-    policy = Policy(state_space=env.observation_space.shape[0],
-                    action_space=env.action_space.shape[0])
+def load_policy(env, model_path, hidden_size=256):
+    policy = Policy(
+        state_space=env.observation_space.shape[0],
+        action_space=env.action_space.shape[0],
+        hidden=hidden_size
+    )
     policy.load_state_dict(torch.load(model_path, map_location='cpu'))
     policy.eval()
     return policy
@@ -26,11 +30,12 @@ def load_policy(env, model_path):
 def main():
     model_path = 'results/model_actor_critic.pt'
     video_path = 'videos/hopper_demo.mp4'
+    hidden_size = 256
     n_episodes = 5000
 
     # --- 1. Live window ---
     env = gym.make('Hopper-v4', render_mode='human')
-    policy = load_policy(env, model_path)
+    policy = load_policy(env, model_path, hidden_size)
     for ep in range(n_episodes):
         state, _ = env.reset()
         done = False
@@ -45,7 +50,7 @@ def main():
 
     # --- 2. Offscreen render -> save mp4 ---
     env = gym.make('Hopper-v4', render_mode='rgb_array')
-    policy = load_policy(env, model_path)
+    policy = load_policy(env, model_path, hidden_size)
     frames = []
     for ep in range(n_episodes):
         state, _ = env.reset()
