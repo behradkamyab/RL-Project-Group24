@@ -10,14 +10,15 @@ class RandomizationWrapper(gym.Wrapper):
     def __init__(
         self,
         env,
-        mass_range=(0.5, 2.0),
+        mass_range=(0.5, 4.5),
         mode="none",
-        adr_init_range=(0.8, 1.2),
+        adr_init_range=(0.9, 1.1),
         adr_window=100,
         adr_target=0.7,
         adr_delta=0.1,
         adr_min_width=0.1,
         adr_update_freq=1,
+        adr_warmup_episodes=0,
         log_every=0,
         verify_mass=False,
         success_key="is_success",
@@ -31,6 +32,7 @@ class RandomizationWrapper(gym.Wrapper):
         self.adr_delta = adr_delta
         self.adr_min_width = adr_min_width
         self.adr_update_freq = adr_update_freq
+        self.adr_warmup_episodes = adr_warmup_episodes
         self.log_every = log_every
         self.verify_mass = verify_mass
         self.success_key = success_key
@@ -44,19 +46,25 @@ class RandomizationWrapper(gym.Wrapper):
         # global limits
         self.mass_min_limit, self.mass_max_limit = mass_range
         init_min, init_max = adr_init_range
-        init_min = max(self.mass_min_limit, init_min)
-        init_max = min(self.mass_max_limit, init_max)
-        if init_min >= init_max:
-            raise ValueError(
-                "adr_init_range must be within mass_range and have init_min < init_max"
-            )
-        if self.mode == "adr":
-            self.mass_min = init_min
-            self.mass_max = init_max
+        if mode == 'adr':
+            self.mass_min, self.mass_max= adr_init_range
         else:
-            self.mass_min = self.mass_min_limit
-            self.mass_max = self.mass_max_limit
-
+            self.mass_min= self.mass_min_limit
+            self.mass_max= self.mass_max_limit
+                
+        # init_min = max(self.mass_min_limit, init_min)
+        # init_max = min(self.mass_max_limit, init_max)
+        # if init_min >= init_max:
+        #     raise ValueError(
+        #         "adr_init_range must be within mass_range and have init_min < init_max"
+        #     )
+        # if self.mode == "adr":
+        #     self.mass_min = init_min
+        #     self.mass_max = init_max
+        # else:
+        #     self.mass_min = self.mass_min_limit
+        #     self.mass_max = self.mass_max_limit
+        self.range_history=[]
     # -----------------------
     # Mass Sampling
     # -----------------------
@@ -93,6 +101,8 @@ class RandomizationWrapper(gym.Wrapper):
     def _update_adr_range(self):
         if self.mode != "adr":
             return
+        if self.adr_warmup_episodes and self.reset_count <= self.adr_warmup_episodes:
+            return
         if len(self.success_window) < self.adr_window:
             return
         if self.adr_update_freq > 1 and (self.reset_count % self.adr_update_freq) != 0:
@@ -124,7 +134,7 @@ class RandomizationWrapper(gym.Wrapper):
 
         new_mass = self._sample_mass()
         self.last_sampled_mass = new_mass
-
+        self.range_history.append((self.mass_min,self.mass_max)) 
         obs, info = super().reset(**kwargs)
 
         if new_mass is not None:

@@ -163,7 +163,7 @@ def main() -> None:
 
     env = gym.make(
         "PandaPush-v3",
-        render_mode="rgb_array",  # Headless rendering (no display, optimized for speed!)
+        render_mode= "rgb_array",  # Headless rendering (no display, optimized for speed!)
         reward_type="dense",
         type=args.env_type,
     )
@@ -190,9 +190,10 @@ def main() -> None:
             "MultiInputPolicy",
             env,
             learning_rate=lr,
-            buffer_size=300000,
+            buffer_size=1000000,
             batch_size=256,
             train_freq=1,
+            gamma= 0.99,
             gradient_steps=1,
             ent_coef="auto",
             target_entropy="auto",
@@ -216,9 +217,9 @@ def main() -> None:
             "MultiInputPolicy",
             env,
             learning_rate=lr,
-            n_steps=8192,  # More steps before update = better advantage estimation
+            n_steps=2048,  # More steps before update = better advantage estimation
             batch_size=64,  # Smaller batch for better gradient signal
-            n_epochs=3,  # Reduced to prevent overfitting (was 20!)
+            n_epochs=10,  # Reduced to prevent overfitting (was 20!)
             gamma=0.99,
             gae_lambda=0.95,
             clip_range=0.2,  # More conservative clip (better stability)
@@ -228,7 +229,7 @@ def main() -> None:
             max_grad_norm=0.5,  # Gradient clipping for stability
             policy_kwargs={
                 "net_arch": dict(pi=[512, 512], vf=[512, 512]),  # Simpler networks
-                "activation_fn": torch.nn.ReLU,
+                "activation_fn": torch.nn.Tanh,
             },
             device=device,
             verbose=1,
@@ -247,8 +248,10 @@ def main() -> None:
     )
 
     # SAVE
+    results_dir = "results"
+    os.makedirs(results_dir, exist_ok=True)
     save_name = f"{args.algo}_push_{args.sampling_strategy}_{args.env_type}_{args.timesteps // 1000}k"
-    model.save(save_name)
+    model.save(os.path.join(results_dir, save_name))
 
 
 if __name__ == "__main__":
