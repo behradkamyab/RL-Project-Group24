@@ -11,7 +11,7 @@ import panda_gym
 import torch
 from stable_baselines3 import SAC, PPO
 
-from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback
 from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.vec_env import DummyVecEnv
 from rand_wrapper import RandomizationWrapper
@@ -135,6 +135,13 @@ def parse_args() -> argparse.Namespace:
         help="Network architecture hidden layers (comma-separated)",
     )
 
+    parser.add_argument(
+        "--resume",
+        type=str,
+        default=None,
+        help="Path to a saved model zip to resume training",
+    )
+
     return parser.parse_args()
 
 
@@ -182,7 +189,15 @@ def main() -> None:
         env = RandomizationWrapper(env, mode="adr", mass_range=mass_range)
 
     # SELECT ALGORITHM WITH TUNED HYPERPARAMETERS
-    if args.algo == "sac":
+    if args.resume:
+        if not os.path.isfile(args.resume):
+            print(f"❌ ERROR: resume file not found: {args.resume}")
+            sys.exit(1)
+        if args.algo == "sac":
+            model = SAC.load(args.resume, env=env, device=device)
+        elif args.algo == "ppo":
+            model = PPO.load(args.resume, env=env, device=device)
+    elif args.algo == "sac":
         # SAC: OPTIMIZED for continuous control pushing tasks
         # Balanced defaults for stability and learning speed
         lr = args.learning_rate if args.learning_rate else 3e-4
@@ -240,11 +255,19 @@ def main() -> None:
     
     print(f"Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
     
-    # Activity callback to prevent cloud platform timeout
+    # Activity + checkpoint callbacks
     activity_callback = ActivityCallback(log_freq=10000)
+    checkpoints_dir = os.path.join("results", "checkpoints")
+    os.makedirs(checkpoints_dir, exist_ok=True)
+    checkpoint_callback = CheckpointCallback(
+        save_freq=50000,
+        save_path=checkpoints_dir,
+        name_prefix=f"{args.algo}_push_{args.sampling_strategy}_{args.env_type}",
+    )
     model.learn(
         total_timesteps=args.timesteps,
-        callback=[activity_callback],
+        callback=[activity_callback, checkpoint_callback],
+        reset_num_timesteps=not bool(args.resume),
     )
 
     # SAVE
