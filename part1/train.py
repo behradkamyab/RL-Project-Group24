@@ -5,7 +5,6 @@
 
 import gymnasium as gym
 import torch
-import torch.optim as optim
 import numpy as np
 import time
 import random
@@ -26,8 +25,8 @@ def main(algorithm='reinforce', baseline_mode='none', baseline_value=0.0, baseli
     env.reset(seed=seed)              
     env.action_space.seed(seed)
 
-    print('State space:', env.observation_space)  # state-space
-    print('Action space:', env.action_space)  # action-space
+    print('State space:', env.observation_space)  
+    print('Action space:', env.action_space)  
 
     os.makedirs(save_dir, exist_ok=True)
 
@@ -37,7 +36,7 @@ def main(algorithm='reinforce', baseline_mode='none', baseline_value=0.0, baseli
     hidden=hidden_size
 )
     agent = Agent(policy, algorithm=algorithm, baseline_mode=baseline_mode,
-     baseline_value=baseline_value, baseline_alpha=baseline_alpha, critic_weight=critic_weight, lr=lr, actor_lr=actor_lr,critic_lr=critic_lr, gamma=gamma, grad_clip=grad_clip, entropy_weight=entropy_weight, normalize_advantage=normalize_advantage)
+    baseline_value=baseline_value, baseline_alpha=baseline_alpha, critic_weight=critic_weight, lr=lr, actor_lr=actor_lr,critic_lr=critic_lr, gamma=gamma, grad_clip=grad_clip, entropy_weight=entropy_weight, normalize_advantage=normalize_advantage)
 
     returns_history = []
     recent_returns = []

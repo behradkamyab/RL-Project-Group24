@@ -16,7 +16,7 @@ def act(policy, state):
         return action.cpu().numpy()
 
 
-def load_policy(env, model_path, hidden_size=256):
+def load_policy(env, model_path, hidden_size):
     policy = Policy(
         state_space=env.observation_space.shape[0],
         action_space=env.action_space.shape[0],
@@ -31,7 +31,7 @@ def main():
     model_path = 'results/model_actor_critic.pt'
     video_path = 'videos/hopper_demo.mp4'
     hidden_size = 256
-    n_episodes = 5000
+    n_episodes = 50
 
     # --- 1. Live window ---
     env = gym.make('Hopper-v4', render_mode='human')

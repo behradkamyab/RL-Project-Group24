@@ -43,7 +43,6 @@ class Policy(torch.nn.Module):
         self.fc2_actor = torch.nn.Linear(self.hidden, self.hidden)
         self.fc3_actor_mean = torch.nn.Linear(self.hidden, action_space)
         
-        # Learn log standard deviation directly. This is easier to tune than sigma.
         init_log_std = math.log(init_std)
         self.log_std = torch.nn.Parameter(torch.full((action_space,), init_log_std))
 
@@ -51,7 +50,6 @@ class Policy(torch.nn.Module):
         """
             Critic network
         """
-        # TASK 3: critic network for actor-critic algorithm
         self.fc1_critic = torch.nn.Linear(state_space, self.hidden)
         self.fc2_critic = torch.nn.Linear(self.hidden, self.hidden)
         self.fc3_critic_v = torch.nn.Linear(self.hidden, 1)
@@ -82,7 +80,6 @@ class Policy(torch.nn.Module):
         """
             Critic
         """
-        # TASK 3: forward in the critic network
         x_critic = self.tanh(self.fc1_critic(x))
         x_critic = self.tanh(self.fc2_critic(x_critic))
         state_value = self.fc3_critic_v(x_critic).squeeze(-1)
@@ -172,9 +169,6 @@ class Agent(object):
 
           if self.baseline_mode == 'none':
             advantages = returns
-
-          elif self.baseline_mode == 'normalize':
-            advantages = standardize(returns)
           
           elif self.baseline_mode == 'constant': 
             advantages = returns - self.baseline_value
@@ -187,40 +181,30 @@ class Agent(object):
                     (1.0 - self.baseline_alpha) * self.baseline_value
                     + self.baseline_alpha * episode_baseline
                 )
-            # normalized_returns = returns/(returns.std() + 1e-8)
           else:
                 raise ValueError(f"Unknown baseline_mode: {self.baseline_mode!r}")
 
-          if self.normalize_advantage and self.baseline_mode != "normalize":
+          if self.normalize_advantage:
                 advantages = standardize(advantages)
 
-          #   - compute policy gradient loss function given actions and returns
           actor_loss = -(action_log_probs * advantages.detach()).mean()
           entropy_loss = -self.entropy_weight * action_entropies.mean()
           loss = actor_loss + entropy_loss
           critic_loss = torch.zeros((), device=self.train_device)
 
-          #   - compute gradients and step the optimizer
-          # self.optimizer.zero_grad()
-          # agent_loss.backward()
-          # self.optimizer.step()
 
         elif self.algorithm == 'actor_critic': 
-          #
-          # TASK 3:
-          #   - compute boostrapped discounted return estimates
+    
           _, state_values = self.policy(states)
           with torch.no_grad():
             _, next_state_values = self.policy(next_states)
             target_t = rewards + self.gamma * next_state_values * (1.0 - done)
           
-          #   - compute advantage terms
           advantage_t = target_t - state_values
           actor_advantages = advantage_t.detach()
           if self.normalize_advantage:
             actor_advantages = standardize(actor_advantages)
 
-          #   - compute actor loss and critic loss
           actor_loss = -(action_log_probs * actor_advantages.detach()).mean()
           critic_loss = F.mse_loss(state_values, target_t)
           entropy_loss = -self.entropy_weight * action_entropies.mean()
