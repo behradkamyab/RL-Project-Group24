@@ -139,8 +139,9 @@ class Agent(object):
         self.action_log_probs = []
         self.action_entropies = []
         self.rewards = []
-        self.done = []
-
+        # self.done = []
+        self.terminated = []
+        self.truncated = []
 
     def update_policy(self):
         action_log_probs = torch.stack(self.action_log_probs, dim=0).to(self.train_device).flatten()
@@ -148,7 +149,9 @@ class Agent(object):
         states = torch.stack(self.states, dim=0).to(self.train_device)
         next_states = torch.stack(self.next_states, dim=0).to(self.train_device)
         rewards = torch.stack(self.rewards, dim=0).to(self.train_device).flatten()
-        done = torch.tensor(self.done, dtype=torch.float32, device=self.train_device)
+        # done = torch.tensor(self.done, dtype=torch.float32, device=self.train_device)
+        terminated = torch.tensor(self.terminated, dtype=torch.float32, device=self.train_device)
+        truncated = torch.tensor(self.truncated, dtype=torch.float32, device=self.train_device)
 
         self._reset_episode_storage()
 
@@ -198,7 +201,8 @@ class Agent(object):
           _, state_values = self.policy(states)
           with torch.no_grad():
             _, next_state_values = self.policy(next_states)
-            target_t = rewards + self.gamma * next_state_values * (1.0 - done)
+            # target_t = rewards + self.gamma * next_state_values * (1.0 - done)
+            target_t = rewards + self.gamma * next_state_values * (1.0 - terminated)
           
           advantage_t = target_t - state_values
           actor_advantages = advantage_t.detach()
@@ -255,11 +259,13 @@ class Agent(object):
 
 
    
-    def store_outcome(self, state, next_state, action_log_prob, action_entropy, reward, done):
+    def store_outcome(self, state, next_state, action_log_prob, action_entropy, reward, terminated, truncated):
         self.states.append(torch.as_tensor(state, dtype=torch.float32))
         self.next_states.append(torch.as_tensor(next_state, dtype=torch.float32))
         self.action_log_probs.append(action_log_prob)
         self.action_entropies.append(action_entropy)
         self.rewards.append(torch.tensor([reward], dtype=torch.float32))
-        self.done.append(float(done))
+        # self.done.append(float(done))
+        self.terminated.append(float(terminated))
+        self.truncated.append(float(truncated))
 

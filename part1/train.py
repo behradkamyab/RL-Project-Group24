@@ -58,7 +58,8 @@ def main(algorithm='reinforce', baseline_mode='none', baseline_value=0.0, baseli
         done = terminated or truncated
         rewards.append(reward)
 
-        agent.store_outcome(state, next_state, log_prob, entropy, reward, done)
+        # agent.store_outcome(state, next_state, log_prob, entropy, reward, done)
+        agent.store_outcome(state, next_state, log_prob, entropy, reward, terminated, truncated)
         state = next_state
       agent.update_policy()
 
