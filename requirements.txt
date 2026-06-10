@@ -1,5 +1,8 @@
 gymnasium
 mujoco
+numpy
+torch
+matplotlib
 stable-baselines3[extra]>=2.0.0
 imageio
 opencv-python<4
