@@ -11,7 +11,7 @@ from agent import Policy
 
 MODEL_PATHS = [
     'results/model_none.pt',                     
-    'results/model_ema_a0.0500.pt',                
+    'results/model_ema_a0.0005.pt',                
     'results/model_actor_critic_refined_seed42.pt',
 ]
 VIDEO_DIR = 'videos'
