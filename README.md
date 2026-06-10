@@ -4,7 +4,7 @@ Course project for *Foundations of Artificial Intelligence and Machine Learning*
 
 This repository is split in two parts:
 
-- **Part 1 — Hopper.** Implement policy-gradient control on the MuJoCo `Hopper-v4` environment from scratch: REINFORCE (with and without a baseline) and Actor-Critic.
+- **Part 1 — Hopper.** Implement policy-gradient control on the MuJoCo `Hopper-v4` environment from scratch: REINFORCE (with and without a baseline) and Actor-Critic. See [Part 1](#part-1--hopper).
 - **Part 2 — PandaGym Push.** Train a robotic-arm pushing policy with stable-baselines3 (PPO/SAC) and study sim-to-real transfer with Uniform and Automatic Domain Randomization (UDR/ADR) over the cube mass. See [Part 2](#part-2--pandagym-push).
 
 Official assignment at [Google Doc](https://docs.google.com/document/d/1AXgLXux3l69vDAPLL-UYD3luFOw3JbyR-pLCS2yuNZk/edit?usp=sharing).
@@ -27,7 +27,7 @@ We train a one-legged `Hopper-v4` agent (11-D observation, 3-D continuous torque
 
 1. **Environment inspection** — explore the Hopper observation/action spaces and episode termination (`test_random_policy.py`).
 2. **REINFORCE** — Monte Carlo policy gradient from scratch, comparing no baseline, a constant baseline, and an exponential-moving-average (EMA) baseline.
-3. **Actor-Critic** — a one-step TD Actor-Critic, then a refined configuration tuned via a small hyperparameter search and evaluated across seeds.
+3. **Actor-Critic** — a one-step TD Actor-Critic. We call the best configuration from the 12-trial hyperparameter search the **tuned Actor-Critic**, and the version obtained by applying three stability-oriented changes to it — a lower actor learning rate (3.9→3.5×10⁻⁵), tighter gradient clipping (0.5→0.3), and advantage normalization — the **refined Actor-Critic**. All methods are evaluated across 9 seeds.
 
 ## How to run
 
@@ -56,9 +56,9 @@ A few of the Hopper policies we trained in Part 1, rolled out in the MuJoCo `Hop
 
 <table>
   <tr>
-    <th align="center">REINFORCE (vanilla)</th>
-    <th align="center">REINFORCE + EMA baseline (&alpha;=0.05)</th>
-    <th align="center">Refined Actor-Critic</th>
+    <th align="center" width="240">REINFORCE (vanilla)</th>
+    <th align="center" width="240">REINFORCE + EMA baseline (&alpha;=0.05)</th>
+    <th align="center" width="240">Refined Actor-Critic</th>
   </tr>
   <tr>
     <td align="center"><img src="part1/videos/model_none.gif" width="240" alt="REINFORCE vanilla Hopper"></td>
@@ -73,7 +73,7 @@ A few of the Hopper policies we trained in Part 1, rolled out in the MuJoCo `Hop
   <tr>
     <td align="center">Collapses within a few steps and barely moves.</td>
     <td align="center">Hops forward, but with an unstable gait.</td>
-    <td align="center">Longest, smoothest, most stable hopping &mdash; our best policy.</td>
+    <td align="center">Longest, smoothest gait; best mean, but on par with EMA.</td>
   </tr>
 </table>
 
