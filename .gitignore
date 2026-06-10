@@ -4,6 +4,10 @@
 **/*.zip
 **/*.zip:Zone.Identifier
 part2/models/
+**/videos/*.png
+part1/results/
+.DS_Store
+
 
 # Python cache
 __pycache__/
@@ -20,5 +24,10 @@ env/
 
 # Outputs
 *.log
-results/
-outputs/
+part2/results/
+part2/outputs/
+part2/udr_steps/
+part2/adr_steps/
+part2/figures/
+
+part2/panda_gym/

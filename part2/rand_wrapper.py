@@ -19,6 +19,10 @@ class RandomizationWrapper(gym.Wrapper):
         adr_min_width=0.1,
         adr_update_freq=1,
         adr_warmup_episodes=0,
+        adr_boundary_prob=0.5,
+        adr_perf_low=0.5,
+        adr_eval_window=50,
+        adr_single_sided=True,
         log_every=0,
         verify_mass=False,
         success_key="is_success",
@@ -28,15 +32,22 @@ class RandomizationWrapper(gym.Wrapper):
         self.mode = mode
         self.mass_range = mass_range
         self.adr_window = adr_window
-        self.adr_target = adr_target
+        self.adr_target = adr_target          
+        self.adr_perf_low = adr_perf_low      
         self.adr_delta = adr_delta
         self.adr_min_width = adr_min_width
         self.adr_update_freq = adr_update_freq
         self.adr_warmup_episodes = adr_warmup_episodes
+        self.adr_boundary_prob = adr_boundary_prob   
+        self.adr_eval_window = adr_eval_window       
+        self.adr_single_sided = adr_single_sided     
         self.log_every = log_every
         self.verify_mass = verify_mass
         self.success_key = success_key
         self.success_window = deque(maxlen=adr_window)
+        self.adr_low_buffer = deque(maxlen=adr_eval_window)
+        self.adr_high_buffer = deque(maxlen=adr_eval_window)
+        self.active_boundary = None           
         self.last_sample_type = "none"
         self.last_sampled_mass = None
         self.last_applied_mass = None
@@ -52,23 +63,8 @@ class RandomizationWrapper(gym.Wrapper):
             self.mass_min= self.mass_min_limit
             self.mass_max= self.mass_max_limit
                 
-        # init_min = max(self.mass_min_limit, init_min)
-        # init_max = min(self.mass_max_limit, init_max)
-        # if init_min >= init_max:
-        #     raise ValueError(
-        #         "adr_init_range must be within mass_range and have init_min < init_max"
-        #     )
-        # if self.mode == "adr":
-        #     self.mass_min = init_min
-        #     self.mass_max = init_max
-        # else:
-        #     self.mass_min = self.mass_min_limit
-        #     self.mass_max = self.mass_max_limit
         self.range_history=[]
-    # -----------------------
-    # Mass Sampling
-    # -----------------------
-
+   
     def _sample_mass(self):
 
         if self.mode == "none":
@@ -79,6 +75,15 @@ class RandomizationWrapper(gym.Wrapper):
             return float(self.np_random.uniform(self.mass_min_limit, self.mass_max_limit))
         if self.mode == "adr":
             self.last_sample_type = "adr"
+            # exactly at a boundary so we can decide whether to push it outward.
+            if self.np_random.random() < self.adr_boundary_prob:
+                # since the source->target gap is one-directional.
+                if self.adr_single_sided or self.np_random.random() < 0.5:
+                    self.active_boundary = "high"
+                    return float(self.mass_max)
+                self.active_boundary = "low"
+                return float(self.mass_min)
+            self.active_boundary = None
             return float(self.np_random.uniform(self.mass_min, self.mass_max))
         else:
             raise NotImplementedError(f"Sampling strategy '{self.mode}' is not implemented yet.")
@@ -95,37 +100,41 @@ class RandomizationWrapper(gym.Wrapper):
                 success = info.get("success")
             if success is not None:
                 self.success_window.append(float(success))
+                if self.mode == "adr":
+                    if self.active_boundary == "high":
+                        self.adr_high_buffer.append(float(success))
+                    elif self.active_boundary == "low":
+                        self.adr_low_buffer.append(float(success))
 
         return obs, reward, terminated, truncated, info
 
     def _update_adr_range(self):
+       
         if self.mode != "adr":
             return
         if self.adr_warmup_episodes and self.reset_count <= self.adr_warmup_episodes:
             return
-        if len(self.success_window) < self.adr_window:
-            return
-        if self.adr_update_freq > 1 and (self.reset_count % self.adr_update_freq) != 0:
-            return
 
-        success_rate = sum(self.success_window) / len(self.success_window)
-        width = self.mass_max - self.mass_min
-        half_delta = self.adr_delta / 2.0
+        # Upper boundary 
+        if len(self.adr_high_buffer) >= self.adr_eval_window:
+            perf = sum(self.adr_high_buffer) / len(self.adr_high_buffer)
+            if perf >= self.adr_target:
+                self.mass_max = min(self.mass_max_limit, self.mass_max + self.adr_delta)
+            elif perf <= self.adr_perf_low:
+                self.mass_max = max(self.mass_min + self.adr_min_width,
+                                    self.mass_max - self.adr_delta)
+            self.adr_high_buffer.clear()
 
-        if success_rate >= self.adr_target:
-            # Expand the range within global limits
-            self.mass_min = max(self.mass_min_limit, self.mass_min - half_delta)
-            self.mass_max = min(self.mass_max_limit, self.mass_max + half_delta)
-        else:
-            # Shrink the range towards the center
-            new_width = max(self.adr_min_width, width - self.adr_delta)
-            center = (self.mass_min + self.mass_max) / 2.0
-            self.mass_min = max(self.mass_min_limit, center - new_width / 2.0)
-            self.mass_max = min(self.mass_max_limit, center + new_width / 2.0)
+        # Lower boundary 
+        if not self.adr_single_sided and len(self.adr_low_buffer) >= self.adr_eval_window:
+            perf = sum(self.adr_low_buffer) / len(self.adr_low_buffer)
+            if perf >= self.adr_target:
+                self.mass_min = max(self.mass_min_limit, self.mass_min - self.adr_delta)
+            elif perf <= self.adr_perf_low:
+                self.mass_min = min(self.mass_max - self.adr_min_width,
+                                    self.mass_min + self.adr_delta)
+            self.adr_low_buffer.clear()
 
-    # -----------------------
-    # Reset
-    # -----------------------
 
     def reset(self, **kwargs):
         self.reset_count += 1

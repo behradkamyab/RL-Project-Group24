@@ -1,0 +1,216 @@
+Created object with mass: 1.0
+Episode 001 | return = -4.789
+Episode 002 | return = -6.537
+Episode 003 | return = -5.212
+Episode 004 | return = -4.529
+Episode 005 | return = -3.882
+Episode 006 | return = -4.424
+Episode 007 | return = -3.986
+Episode 008 | return = -3.153
+Episode 009 | return = -4.167
+Episode 010 | return = -0.038
+Episode 011 | return = -2.980
+Episode 012 | return = -2.674
+Episode 013 | return = -0.024
+Episode 014 | return = -4.199
+Episode 015 | return = -4.807
+Episode 016 | return = -5.001
+Episode 017 | return = -5.901
+Episode 018 | return = -4.929
+Episode 019 | return = -0.049
+Episode 020 | return = -3.570
+Episode 021 | return = -0.029
+Episode 022 | return = -0.041
+Episode 023 | return = -4.501
+Episode 024 | return = -5.241
+Episode 025 | return = -0.044
+Episode 026 | return = -4.694
+Episode 027 | return = -3.083
+Episode 028 | return = -0.031
+Episode 029 | return = -4.445
+Episode 030 | return = -0.002
+Episode 031 | return = -0.037
+Episode 032 | return = -0.026
+Episode 033 | return = -4.028
+Episode 034 | return = -5.683
+Episode 035 | return = -2.719
+Episode 036 | return = -4.227
+Episode 037 | return = -4.834
+Episode 038 | return = -5.305
+Episode 039 | return = -4.565
+Episode 040 | return = -4.702
+Episode 041 | return = -4.763
+Episode 042 | return = -3.964
+Episode 043 | return = -3.595
+Episode 044 | return = -3.698
+Episode 045 | return = -5.641
+Episode 046 | return = -3.235
+Episode 047 | return = -4.999
+Episode 048 | return = -4.026
+Episode 049 | return = -4.693
+Episode 050 | return = -3.757
+
+============================================================
+ EVALUATION RESULTS
+============================================================
+Environment type: source
+Episodes evaluated: 50
+------------------------------------------------------------
+RETURN METRICS:
+  Mean return:     -3.509
+  Std dev:         1.903
+  Variance:        3.620
+  Min return:      -6.537
+  Max return:      -0.002
+------------------------------------------------------------
+SUCCESS METRICS:
+  Success rate:    20.00%
+  Success variance: 0.1600
+============================================================
+argv[0]=--background_color_red=0.8745098114013672
+argv[1]=--background_color_green=0.21176470816135406
+argv[2]=--background_color_blue=0.1764705926179886
+Created object with mass: 1.0
+Episode 001 | return = -3.974
+Episode 002 | return = -3.717
+Episode 003 | return = -5.299
+Episode 004 | return = -6.312
+Episode 005 | return = -3.678
+Episode 006 | return = -5.492
+Episode 007 | return = -4.674
+Episode 008 | return = -0.037
+Episode 009 | return = -0.036
+Episode 010 | return = -3.388
+Episode 011 | return = -5.358
+Episode 012 | return = -5.563
+Episode 013 | return = -4.275
+Episode 014 | return = -4.959
+Episode 015 | return = -3.616
+Episode 016 | return = -6.854
+Episode 017 | return = -4.789
+Episode 018 | return = -3.777
+Episode 019 | return = -5.556
+Episode 020 | return = -5.156
+Episode 021 | return = -0.044
+Episode 022 | return = -0.025
+Episode 023 | return = -2.963
+Episode 024 | return = -5.110
+Episode 025 | return = -5.879
+Episode 026 | return = -4.480
+Episode 027 | return = -5.478
+Episode 028 | return = -3.582
+Episode 029 | return = -0.049
+Episode 030 | return = -4.202
+Episode 031 | return = -6.649
+Episode 032 | return = -4.433
+Episode 033 | return = -3.284
+Episode 034 | return = -4.937
+Episode 035 | return = -5.089
+Episode 036 | return = -4.167
+Episode 037 | return = -4.735
+Episode 038 | return = -3.745
+Episode 039 | return = -6.069
+Episode 040 | return = -0.050
+Episode 041 | return = -4.822
+Episode 042 | return = -0.031
+Episode 043 | return = -3.601
+Episode 044 | return = -0.047
+Episode 045 | return = -0.030
+Episode 046 | return = -3.953
+Episode 047 | return = -3.314
+Episode 048 | return = -0.035
+Episode 049 | return = -3.015
+Episode 050 | return = -3.352
+
+============================================================
+ EVALUATION RESULTS
+============================================================
+Environment type: source
+Episodes evaluated: 50
+------------------------------------------------------------
+RETURN METRICS:
+  Mean return:     -3.674
+  Std dev:         2.029
+  Variance:        4.115
+  Min return:      -6.854
+  Max return:      -0.025
+------------------------------------------------------------
+SUCCESS METRICS:
+  Success rate:    20.00%
+  Success variance: 0.1600
+============================================================
+argv[0]=--background_color_red=0.8745098114013672
+argv[1]=--background_color_green=0.21176470816135406
+argv[2]=--background_color_blue=0.1764705926179886
+Created object with mass: 1.0
+Episode 001 | return = -3.059
+Episode 002 | return = -6.028
+Episode 003 | return = -4.329
+Episode 004 | return = -2.517
+Episode 005 | return = -0.044
+Episode 006 | return = -3.768
+Episode 007 | return = -2.605
+Episode 008 | return = -4.367
+Episode 009 | return = -3.055
+Episode 010 | return = -2.699
+Episode 011 | return = -3.505
+Episode 012 | return = -5.007
+Episode 013 | return = -3.303
+Episode 014 | return = -4.703
+Episode 015 | return = -2.776
+Episode 016 | return = -4.940
+Episode 017 | return = -4.433
+Episode 018 | return = -3.210
+Episode 019 | return = -3.601
+Episode 020 | return = -0.007
+Episode 021 | return = -5.106
+Episode 022 | return = -4.790
+Episode 023 | return = -4.978
+Episode 024 | return = -3.354
+Episode 025 | return = -5.085
+Episode 026 | return = -3.503
+Episode 027 | return = -5.049
+Episode 028 | return = -0.029
+Episode 029 | return = -5.500
+Episode 030 | return = -3.232
+Episode 031 | return = -0.024
+Episode 032 | return = -0.023
+Episode 033 | return = -4.513
+Episode 034 | return = -5.322
+Episode 035 | return = -4.543
+Episode 036 | return = -4.832
+Episode 037 | return = -4.418
+Episode 038 | return = -5.104
+Episode 039 | return = -4.302
+Episode 040 | return = -0.050
+Episode 041 | return = -3.541
+Episode 042 | return = -0.042
+Episode 043 | return = -3.533
+Episode 044 | return = -3.801
+Episode 045 | return = -4.163
+Episode 046 | return = -4.702
+Episode 047 | return = -0.007
+Episode 048 | return = -4.743
+Episode 049 | return = -0.032
+Episode 050 | return = -5.543
+
+============================================================
+ EVALUATION RESULTS
+============================================================
+Environment type: source
+Episodes evaluated: 50
+------------------------------------------------------------
+RETURN METRICS:
+  Mean return:     -3.436
+  Std dev:         1.793
+  Variance:        3.214
+  Min return:      -6.028
+  Max return:      -0.007
+------------------------------------------------------------
+SUCCESS METRICS:
+  Success rate:    18.00%
+  Success variance: 0.1476
+============================================================
+argv[0]=--background_color_red=0.8745098114013672
+argv[1]=--background_color_green=0.21176470816135406
+argv[2]=--background_color_blue=0.1764705926179886

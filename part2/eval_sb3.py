@@ -5,10 +5,10 @@ import gymnasium as gym
 import numpy as np
 from stable_baselines3 import SAC, PPO
 import panda_gym  # noqa: F401 - required so Panda envs are registered
-np.random.seed(65) # used for reproducibility 
+np.random.seed(50) # used for reproducibility 
 
 
-def evaluate(model_path: str, n_episodes: int, deterministic: bool, render: bool, env_type: str) -> None:
+def evaluate(model_path: str, n_episodes: int, deterministic: bool, render: bool, env_type: str, seed_offset: int) -> None:
     
     if not model_path.endswith(".zip"):
         model_path_to_load = model_path + ".zip"
@@ -20,8 +20,7 @@ def evaluate(model_path: str, n_episodes: int, deterministic: bool, render: bool
 
     render_mode = "human" if render else "rgb_array"
     
-    # create environment without 'type' parameter
-    env = gym.make("PandaPush-v3", render_mode=render_mode, reward_type="dense" , type=args.env_type)
+    env = gym.make("PandaPush-v3", render_mode=render_mode, reward_type="dense" , type=env_type)
     
     # Load model
     if "sac" in model_path.lower():
@@ -35,7 +34,7 @@ def evaluate(model_path: str, n_episodes: int, deterministic: bool, render: bool
     successes = []
 
     for episode in range(1, n_episodes + 1):
-        obs, info = env.reset(seed=episode)  # Use episode number as seed for reproducibility
+        obs, info = env.reset(seed=args.seed_offset + episode)  # Use episode number as seed for reproducibility
         terminated = False
         truncated = False 
         episode_return = 0.0
@@ -88,6 +87,8 @@ def evaluate(model_path: str, n_episodes: int, deterministic: bool, render: bool
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate trained model on PandaPush")
+    parser.add_argument("--seed-offset", type=int, default=0,
+    help="Added to per-episode seed for multi-seed eval")
     parser.add_argument("--model-path", type=str, required=True, help="Path to model zip file")
     parser.add_argument("--episodes", type=int, default=50, help="Number of eval episodes")
     parser.add_argument("--stochastic", action="store_true", help="Use stochastic policy")
@@ -104,4 +105,5 @@ if __name__ == "__main__":
         deterministic=not args.stochastic,
         render=args.render,
         env_type=args.env_type,
+        seed_offset=args.seed_offset
     )

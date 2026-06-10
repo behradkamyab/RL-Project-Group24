@@ -16,8 +16,7 @@ from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.vec_env import DummyVecEnv
 from rand_wrapper import RandomizationWrapper
 
-# Force CUDA environment variables before any GPU operations
-os.environ['CUDA_LAUNCH_BLOCKING'] = '1'  # Synchronous GPU launches for debugging
+os.environ['CUDA_LAUNCH_BLOCKING'] = '1'  
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'  # Use first GPU
 
 
@@ -35,34 +34,26 @@ class ActivityCallback(BaseCallback):
         
         # Create log file header
         with open(self.log_file, "w") as f:
-            f.write("="*70 + "\n")
             f.write(f"Training started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write("="*70 + "\n\n")
 
     def _on_step(self) -> bool:
-        # Log every log_freq steps OR every 30 seconds (whichever comes first)
         current_time = time.time()
         if self.num_timesteps % self.log_freq == 0 or (current_time - self.last_log_time) > 100:
             elapsed = current_time - self.start_time
             fps = self.num_timesteps / elapsed if elapsed > 0 else 0
             
-            # Format log message
             log_msg = (
                 f"\n{'='*70}\n"
-                f"⏱️  [{datetime.now().strftime('%H:%M:%S')}] ACTIVE - Step {self.num_timesteps} | "
+                f" [{datetime.now().strftime('%H:%M:%S')}] ACTIVE - Step {self.num_timesteps} | "
                 f"Elapsed: {elapsed/60:.1f}min | FPS: {fps:.1f}\n"
-                f"📊 Timesteps: {self.num_timesteps:,}\n"
-                f"{'='*70}\n"
+                f" Timesteps: {self.num_timesteps:,}\n"
             )
             
-            # Print to console (prevents cloud timeout)
             print(log_msg)
             
-            # Save to file (persistent backup)
             with open(self.log_file, "a") as f:
                 f.write(log_msg)
             
-            # Force flush output to cloud platform
             sys.stdout.flush()
             sys.stderr.flush()
             
@@ -94,7 +85,7 @@ def parse_args() -> argparse.Namespace:
         "--mass-range",
         type=float,
         nargs=2,
-        default=[0.5, 2.0],
+        default=[0.5, 4.5],
         metavar=("MIN", "MAX"),
         help="Object mass range, e.g. --mass-range 1 3 or --mass-range 0.5 6",
     )
@@ -151,26 +142,25 @@ def main() -> None:
     try:
         net_arch = [int(x.strip()) for x in args.net_arch.split(",") if x.strip()]
     except ValueError:
-        print("❌ ERROR: --net-arch must be comma-separated integers, e.g. 256,256")
+        print(" ERROR: --net-arch must be comma-separated integers, e.g. 256,256")
         sys.exit(1)
 
-    # FORCE GPU Configuration
     if not torch.cuda.is_available():
-        print("❌ ERROR: CUDA GPU not available!")
+        print(" ERROR: CUDA GPU not available!")
         print("   Install PyTorch with GPU support or check your NVIDIA drivers.")
         sys.exit(1)
     
     device = "cuda"
-    print(f"🖥️  FORCING GPU device: {device}")
-    print(f"📊 GPU Name: {torch.cuda.get_device_name(0)}")
-    print(f"📊 CUDA Version: {torch.version.cuda}")
-    torch.cuda.empty_cache()  # Clear GPU cache before training
+    print(f" FORCING GPU device: {device}")
+    print(f" GPU Name: {torch.cuda.get_device_name(0)}")
+    print(f" CUDA Version: {torch.version.cuda}")
+    torch.cuda.empty_cache()  
 
     set_random_seed(args.seed)
 
     env = gym.make(
         "PandaPush-v3",
-        render_mode= "rgb_array",  # Headless rendering (no display, optimized for speed!)
+        render_mode= "rgb_array", 
         reward_type="dense",
         type=args.env_type,
     )
@@ -179,7 +169,7 @@ def main() -> None:
     env.action_space.seed(args.seed)
     env.observation_space.seed(args.seed)
 
-    # UDR / ADR
+  
     mass_range = (float(args.mass_range[0]), float(args.mass_range[1]))
 
     if args.sampling_strategy == "udr":
@@ -188,18 +178,15 @@ def main() -> None:
     elif args.sampling_strategy == "adr":
         env = RandomizationWrapper(env, mode="adr", mass_range=mass_range)
 
-    # SELECT ALGORITHM WITH TUNED HYPERPARAMETERS
     if args.resume:
         if not os.path.isfile(args.resume):
-            print(f"❌ ERROR: resume file not found: {args.resume}")
+            print(f"ERROR: resume file not found: {args.resume}")
             sys.exit(1)
         if args.algo == "sac":
             model = SAC.load(args.resume, env=env, device=device)
         elif args.algo == "ppo":
             model = PPO.load(args.resume, env=env, device=device)
     elif args.algo == "sac":
-        # SAC: OPTIMIZED for continuous control pushing tasks
-        # Balanced defaults for stability and learning speed
         lr = args.learning_rate if args.learning_rate else 3e-4
         model = SAC(
             "MultiInputPolicy",
@@ -225,25 +212,23 @@ def main() -> None:
         )
 
     elif args.algo == "ppo":
-        # PPO: Optimized for continuous control (pushing task)
-        # Key: Higher LR, lower epochs, aggressive exploration
-        lr = args.learning_rate if args.learning_rate else 3e-4  # 3x faster learning!
+        lr = args.learning_rate if args.learning_rate else 3e-4  #
         model = PPO(
             "MultiInputPolicy",
             env,
             learning_rate=lr,
-            n_steps=2048,  # More steps before update = better advantage estimation
-            batch_size=64,  # Smaller batch for better gradient signal
-            n_epochs=10,  # Reduced to prevent overfitting (was 20!)
+            n_steps=2048,  
+            batch_size=64, 
+            n_epochs=10,  
             gamma=0.99,
             gae_lambda=0.95,
-            clip_range=0.2,  # More conservative clip (better stability)
-            ent_coef=0.05,  # High entropy for aggressive exploration (critical for pushing!)
-            use_sde=True,  # State-dependent exploration
+            clip_range=0.2,    
+            ent_coef=0.05,     
+            use_sde=True,      
             sde_sample_freq=4,
-            max_grad_norm=0.5,  # Gradient clipping for stability
+            max_grad_norm=0.5, 
             policy_kwargs={
-                "net_arch": dict(pi=[512, 512], vf=[512, 512]),  # Simpler networks
+                "net_arch": dict(pi=[512, 512], vf=[512, 512]), 
                 "activation_fn": torch.nn.Tanh,
             },
             device=device,
@@ -251,16 +236,16 @@ def main() -> None:
         )
 
     # TRAIN
-    print(f"\n🚀 Training {args.algo.upper()} for {args.timesteps} timesteps...")
+    print(f"\n Training {args.algo.upper()} for {args.timesteps} timesteps...")
     
     print(f"Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
     
-    # Activity + checkpoint callbacks
+
     activity_callback = ActivityCallback(log_freq=10000)
-    checkpoints_dir = os.path.join("results", "checkpoints")
+    checkpoints_dir = os.path.join("models", "checkpoints")
     os.makedirs(checkpoints_dir, exist_ok=True)
     checkpoint_callback = CheckpointCallback(
-        save_freq=50000,
+        save_freq=100000,
         save_path=checkpoints_dir,
         name_prefix=f"{args.algo}_push_{args.sampling_strategy}_{args.env_type}",
     )
@@ -270,7 +255,6 @@ def main() -> None:
         reset_num_timesteps=not bool(args.resume),
     )
 
-    # SAVE
     results_dir = "results"
     os.makedirs(results_dir, exist_ok=True)
     save_name = f"{args.algo}_push_{args.sampling_strategy}_{args.env_type}_{args.timesteps // 1000}k"
