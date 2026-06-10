@@ -85,7 +85,7 @@ def parse_args() -> argparse.Namespace:
         "--mass-range",
         type=float,
         nargs=2,
-        default=[0.5, 4.5],
+        default=[0.5, 6.0],
         metavar=("MIN", "MAX"),
         help="Object mass range, e.g. --mass-range 1 3 or --mass-range 0.5 6",
     )
